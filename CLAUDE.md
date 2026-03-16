@@ -14,19 +14,51 @@
 ## プロジェクト構成
 ```
 gas-template-for-beginners/
-├── CLAUDE.md          # このファイル（AI向け指示書）
-├── README.md          # 利用者向けガイド
-├── .clasp.json        # clasp設定（自動生成）
-├── .claspignore       # Googleに送らないファイルの指定
-├── appsscript.json    # GASの設定
-└── src/               # コード置き場
-    └── main.gs        # メインの処理
+├── CLAUDE.md              # このファイル（AI向け指示書）
+├── README.md              # 利用者向けガイド
+├── .clasp.json            # clasp設定（自動生成）
+├── .claspignore           # Googleに送らないファイルの指定
+├── appsscript.json        # GASの設定
+├── src/                   # コード置き場
+│   └── main.gs            # メインの処理
+└── test/                  # ローカル動作検証
+    ├── run.js             # 検証ランナー
+    ├── mock/
+    │   └── gas-mock.js    # GAS関数のモック
+    └── data/              # テスト用CSVデータ
 ```
 
 ## 開発時のルール
 - コードを書いたら `clasp push` でGoogleに反映するかユーザーに確認すること（勝手にpushしない）
 - エラーが出たら原因と対処法をわかりやすく説明すること
 - 変更を加えたら「スプレッドシート情報」セクションも更新すること
+
+## ローカル動作検証のルール
+
+GASのコードを書いたり修正したら、pushする前にローカルで動作検証を行うこと。
+
+### 検証の手順
+1. テスト用CSVデータを用意する（下記「テストデータの準備」参照）
+2. `node test/run.js <関数名>` でローカル実行する
+3. エラーが出たらその場で修正して再実行する
+4. 正常に動くことを確認してから、ユーザーにpushするか確認する
+
+### テストデータの準備
+テスト用のCSVデータは `test/data/` に置く。ファイル名はシート名と一致させる（例: "売上"シート → `test/data/売上.csv`）。
+
+データの入手方法（上から順に試す）：
+1. ユーザーに「スプレッドシートの○○シートにどんなデータが入っていますか？最初の数行を教えてください」と聞いて、回答からCSVを生成する
+2. ユーザーに「ブラウザでスプレッドシートを開いて、○○タブを選択 → ファイル → ダウンロード → カンマ区切り形式(.csv) でダウンロードし、test/data/ フォルダに入れてください」と案内する
+
+### モックの制限
+以下はローカルでは検証できない。pushした後にブラウザでの最終確認が必要：
+- 実際のスプレッドシートのデータに依存する結果の正確性
+- Google側の権限エラー
+- トリガー（時間指定の自動実行）の動作
+- getActiveSpreadsheet() でアクティブなシートに依存する動作（モックではデフォルトでCSVデータを返す）
+
+### モックの拡張
+`test/mock/gas-mock.js` にはSpreadsheetApp, Logger, GmailApp, DriveApp, Utilitiesのモックが含まれている。新しいGASサービスを使う場合はモックを追加すること。
 
 ## セットアップ手順（ユーザーに「セットアップして」と言われたら）
 
@@ -42,11 +74,13 @@ gas-template-for-beginners/
 3. ユーザーにスプレッドシートのURLまたは用途を確認する
 4. `clasp create --title "プロジェクト名" --rootDir src` または `clasp clone <スクリプトID> --rootDir src` を実行
 5. `src/` ディレクトリと `main.gs` を作成
-6. `.claspignore` を作成（node_modules, .git, *.md などを除外）
+6. `.claspignore` を作成（node_modules, .git, *.md, test/ などを除外）
 7. `git init` でリポジトリを初期化する
-8. 動作確認として簡単な関数（例: `function hello() { Logger.log("Hello"); }`）を作り、ユーザーに確認のうえ `clasp push` で反映
-9. ユーザーに「ブラウザで https://script.google.com を開いて、今作ったプロジェクトを開き、hello関数を実行してみてください」と案内
-10. 動作確認ができたら「セットアップ完了です。やりたいことを教えてください」と伝える
+8. 動作確認として簡単な関数（例: `function hello() { Logger.log("Hello"); }`）を作成
+9. `node test/run.js hello` でローカル検証を行い、動作を確認
+10. ユーザーに確認のうえ `clasp push` で反映
+11. ユーザーに「ブラウザで https://script.google.com を開いて、今作ったプロジェクトを開き、hello関数を実行してみてください」と案内
+12. 動作確認ができたら「セットアップ完了です。やりたいことを教えてください」と伝える
 
 ## GASの制限事項
 - 1回の実行は最大6分（長い処理は分割する）
